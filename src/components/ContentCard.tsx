@@ -72,7 +72,10 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
 
   const openLinkedIn = () => {
     if (content.type !== "linkedin") return;
-    const share = content.shareUrl || (typeof window !== "undefined" ? window.location.href : "");
+    const share =
+      content.shareUrl ||
+      import.meta.env.VITE_LINKEDIN_SHARE_URL ||
+      "";
     const targetUrl = share
       ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(share)}`
       : "https://www.linkedin.com/feed/";
