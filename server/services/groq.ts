@@ -41,6 +41,7 @@ export interface LinkedInPost {
   type: 'linkedin';
   title: string;
   content: string;
+  shareUrl?: string;
   day: number;
   time: string;
   tags: string[];
@@ -640,6 +641,7 @@ CRITICAL: Escape all newlines as \\n. Response must be valid JSON.`;
         type: 'linkedin' as const,
         title: post.title || 'Untitled Post',
         content: post.content || '',
+        shareUrl: post.shareUrl || '',
         day: (index * 2) + 2, // Day 2 and Day 4
         time: times[index % times.length],
         tags: Array.isArray(post.tags) ? post.tags : [],

@@ -5,6 +5,7 @@ export interface ContentPiece {
   content: string;
   hook?: string;
   template?: string;
+  shareUrl?: string;
   day: number;
   time: string;
   tags?: string[];
@@ -219,6 +220,7 @@ You've earned nothing. And that's the point.`,
     id: "li-1",
     type: "linkedin",
     title: "The Productivity Paradox",
+    shareUrl: "https://lovable.dev",
     content: `I used to wear my 80-hour work weeks like a badge of honor.
 
 Then I burned out. Completely.
@@ -257,6 +259,7 @@ What's one productivity "rule" you've unlearned?
     id: "li-2",
     type: "linkedin",
     title: "Rethinking Success",
+    shareUrl: "https://lovable.dev",
     content: `A senior exec once told me: "If you're not exhausted, you're not working hard enough."
 
 I believed him. For years.

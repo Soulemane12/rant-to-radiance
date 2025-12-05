@@ -39,6 +39,7 @@ interface LinkedInPost {
   type: 'linkedin';
   title: string;
   content: string;
+  shareUrl?: string;
   day: number;
   time: string;
   tags: string[];

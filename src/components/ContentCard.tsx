@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Copy, Check, Clock, Hash } from "lucide-react";
+import { Copy, Check, Clock, Hash, ExternalLink } from "lucide-react";
 import { ContentPiece } from "@/data/mockContent";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +58,34 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
   const config = platformConfig[content.type];
   const templateLabel = formatTemplate(content.template);
 
+  const heroTweet = (() => {
+    if (content.type !== "twitter") return "";
+    // Use the full generated thread (including newlines) to prefill the intent URL.
+    return content.content.trim();
+  })();
+
+  const postToX = (text: string) => {
+    const base = "https://twitter.com/intent/tweet";
+    const url = `${base}?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const openLinkedIn = () => {
+    if (content.type !== "linkedin") return;
+    const share = content.shareUrl || (typeof window !== "undefined" ? window.location.href : "");
+    const targetUrl = share
+      ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(share)}`
+      : "https://www.linkedin.com/feed/";
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const getCopyText = () => {
+    if (content.type === "linkedin" && content.title) {
+      return `${content.title}\n\n${content.content}`;
+    }
+    return content.content;
+  };
+
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await navigator.clipboard.writeText(content.content);
@@ -91,18 +119,54 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
               )}
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="shrink-0"
-            onClick={handleCopy}
-          >
-            {copied ? (
-              <Check className="w-4 h-4 text-[hsl(142,71%,45%)]" />
-            ) : (
-              <Copy className="w-4 h-4 text-muted-foreground" />
+          <div className="flex items-center gap-2">
+            {content.type === "twitter" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  postToX(heroTweet || content.content);
+                }}
+              >
+                <ExternalLink className="w-3 h-3" />
+                Post to X
+              </Button>
             )}
-          </Button>
+            {content.type === "linkedin" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openLinkedIn();
+                }}
+              >
+                <ExternalLink className="w-3 h-3" />
+                Share on LinkedIn
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                const text = getCopyText();
+                navigator.clipboard.writeText(text);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+            >
+              {copied ? (
+                <Check className="w-4 h-4 text-[hsl(142,71%,45%)]" />
+              ) : (
+                <Copy className="w-4 h-4 text-muted-foreground" />
+              )}
+            </Button>
+          </div>
         </div>
       </CardHeader>
       
@@ -173,7 +237,8 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
               variant="secondary"
               size="sm"
               onClick={async () => {
-                await navigator.clipboard.writeText(content.content);
+                const text = getCopyText();
+                await navigator.clipboard.writeText(text);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}
