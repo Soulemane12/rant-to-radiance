@@ -13,13 +13,8 @@ const Footer = () => {
             <span className="font-bold text-lg">One-Take Studio</span>
           </div>
 
-          {/* Links */}
-          <div className="flex items-center gap-8 text-sm">
-            <a href="#" className="hover:text-primary transition-colors">Features</a>
-            <a href="#" className="hover:text-primary transition-colors">Pricing</a>
-            <a href="#" className="hover:text-primary transition-colors">Blog</a>
-            <a href="#" className="hover:text-primary transition-colors">Support</a>
-          </div>
+          {/* Links removed per request */}
+          <div className="flex items-center gap-8 text-sm" />
 
           {/* Copyright */}
           <p className="text-sm text-secondary-foreground/70">

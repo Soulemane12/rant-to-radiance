@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Copy, Check, Clock, Hash, ExternalLink, Mail, Send } from "lucide-react";
+import { Copy, Check, Clock, Hash, ExternalLink, Mail, Send, Volume2 } from "lucide-react";
 import { ContentPiece } from "@/data/mockContent";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { getPreviewText } from "@/lib/content-utils";
 
 interface ContentCardProps {
   content: ContentPiece;
@@ -61,6 +62,9 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [emailTo, setEmailTo] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const config = platformConfig[content.type];
   const templateLabel = formatTemplate(content.template);
 
@@ -146,6 +150,61 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleVoicePreview = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // If we already have audio, just toggle play/pause
+    if (audioUrl && audioRef.current) {
+      if (audioRef.current.paused) {
+        audioRef.current.play();
+        toast.success("Playing voice preview");
+      } else {
+        audioRef.current.pause();
+        toast.info("Paused voice preview");
+      }
+      return;
+    }
+
+    try {
+      setIsLoadingAudio(true);
+      const text = getPreviewText(content);
+
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const resp = await fetch(`${apiUrl}/api/voice-preview`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!resp.ok) {
+        const errorData = await resp.json().catch(() => ({ message: 'Failed to generate voice preview' }));
+        throw new Error(errorData.message || 'Failed to generate voice preview');
+      }
+
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      setAudioUrl(url);
+
+      toast.success("Voice preview generated!", {
+        description: "Click the audio player to listen",
+      });
+
+      // Auto-play once loaded
+      setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.play();
+        }
+      }, 100);
+    } catch (error: any) {
+      console.error('Voice preview error:', error);
+      toast.error(error.message || 'Failed to generate voice preview');
+    } finally {
+      setIsLoadingAudio(false);
+    }
+  };
+
   return (
     <>
     <Card 
@@ -157,8 +216,8 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
       onClick={onToggle}
     >
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-3 min-w-0">
             <span className="text-2xl">{config.icon}</span>
             <div>
               <Badge variant="secondary" className={cn("mb-2", config.bgClass, config.textClass)}>
@@ -172,7 +231,7 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto sm:justify-end">
             {content.type === "twitter" && (
               <Button
                 variant="outline"
@@ -234,6 +293,16 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
                 Send Email
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-1"
+              onClick={handleVoicePreview}
+              disabled={isLoadingAudio}
+            >
+              <Volume2 className="w-3 h-3" />
+              {isLoadingAudio ? "Generating..." : audioUrl ? "Play/Pause" : "Voice Preview"}
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -306,6 +375,17 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
           >
             View Full Script
           </Button>
+        )}
+
+        {audioUrl && (
+          <div className="mt-4 pt-4 border-t border-border" onClick={(e) => e.stopPropagation()}>
+            <audio
+              ref={audioRef}
+              src={audioUrl}
+              className="w-full"
+              controls
+            />
+          </div>
         )}
       </CardContent>
     </Card>

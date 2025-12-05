@@ -14,28 +14,11 @@ const Navbar = () => {
             <span className="font-bold text-lg text-foreground">One-Take Studio</span>
           </div>
 
-          {/* Navigation */}
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Features
-            </a>
-            <a href="#demo" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Demo
-            </a>
-            <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Pricing
-            </a>
-          </div>
+          {/* Navigation removed per request to strip static menu items */}
+          <div className="hidden md:flex items-center gap-8" />
 
-          {/* CTA */}
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm">
-              Sign In
-            </Button>
-            <Button size="sm">
-              Get Started
-            </Button>
-          </div>
+          {/* CTA removed */}
+          <div className="flex items-center gap-3" />
         </div>
       </div>
     </nav>

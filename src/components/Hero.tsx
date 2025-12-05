@@ -66,19 +66,7 @@ const Hero = ({ onStartDemo }: HeroProps) => {
             See the Magic
             <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
-          <Button 
-            variant="outline" 
-            size="lg" 
-            className="text-lg px-8 py-6"
-          >
-            Watch Demo
-          </Button>
         </div>
-        
-        {/* Trust badge */}
-        <p className="mt-8 text-sm text-muted-foreground">
-          No credit card required • Free to try • Content in seconds
-        </p>
       </div>
     </section>
   );

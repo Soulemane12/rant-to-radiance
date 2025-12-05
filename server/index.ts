@@ -237,6 +237,81 @@ app.post('/api/transcribe-url', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/voice-preview
+ * Generate voice preview using Hathora TTS API
+ */
+app.post('/api/voice-preview', async (req: Request, res: Response) => {
+  try {
+    const { text } = req.body;
+
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing text',
+        message: 'Please provide text to synthesize',
+      });
+    }
+
+    console.log(`[API] Generating voice preview for text: ${text.substring(0, 100)}...`);
+
+    const apiKey = process.env.HATHORA_API_KEY;
+    const ttsUrl = process.env.HATHORA_TTS_URL;
+
+    if (!apiKey || !ttsUrl) {
+      console.error('[API] Hathora configuration missing');
+      return res.status(500).json({
+        success: false,
+        error: 'TTS service not configured',
+        message: 'Hathora API key or TTS URL not configured',
+      });
+    }
+
+    // Call Hathora TTS API
+    const ttsResponse = await fetch(ttsUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'audio/wav',
+      },
+      body: JSON.stringify({
+        text, // Hathora expects the text field (was previously sending `input`)
+        // voice: "default",
+        // format: "mp3",
+      }),
+    });
+
+    if (!ttsResponse.ok) {
+      const errText = await ttsResponse.text();
+      console.error('[API] Hathora TTS error:', errText);
+      return res.status(ttsResponse.status).json({
+        success: false,
+        error: 'TTS generation failed',
+        message: 'Hathora TTS API returned an error',
+        details: errText,
+      });
+    }
+
+    // Get the audio buffer
+    const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+    const contentType = ttsResponse.headers.get('content-type') || 'audio/wav';
+    console.log(`[API] Voice preview generated successfully (${audioBuffer.length} bytes)`);
+
+    // Send back the audio file
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Length', audioBuffer.length.toString());
+    res.status(200).send(audioBuffer);
+  } catch (error: any) {
+    console.error('[API] Voice preview error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error',
+      message: error.message || 'An unknown error occurred',
+    });
+  }
+});
+
+/**
  * POST /api/send-newsletter
  * Send a newsletter email using Nodemailer (Gmail)
  */

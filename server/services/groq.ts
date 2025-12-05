@@ -469,6 +469,9 @@ CRITICAL: Escape all newlines as \\n. Response must be valid JSON.`;
       });
 
       const responseContent = completion.choices[0]?.message?.content || '{}';
+      console.log('[Groq] LinkedIn posts generated');
+      console.log('[Groq] Raw LinkedIn response:', responseContent.substring(0, 500));
+
       const parsed = this.parseLinkedInPosts(responseContent);
 
       return parsed;
@@ -626,22 +629,76 @@ CRITICAL: Escape all newlines as \\n. Response must be valid JSON.`;
       try {
         parsed = JSON.parse(jsonStr);
       } catch (firstError) {
-        console.log('[Groq] Initial parse failed, fixing JSON...');
-        jsonStr = jsonStr.replace(
-          /"content"\s*:\s*"([^"]*(?:\\"[^"]*)*)"/gs,
-          (match, content) => {
-            const escaped = content
-              .replace(/\n/g, '\\n')
-              .replace(/\r/g, '\\r')
-              .replace(/\t/g, '\\t');
-            return `"content": "${escaped}"`;
+        console.log('[Groq] Initial LinkedIn parse failed, attempting comprehensive JSON fixes...');
+
+        // Try comprehensive JSON fixing
+        try {
+          // Fix all string field values (title, content, shareUrl, tags, etc.)
+          jsonStr = jsonStr.replace(
+            /"(title|content|shareUrl)"\s*:\s*"((?:[^"\\]|\\.)*)"/gs,
+            (_match, fieldName, value) => {
+              // Escape control characters that aren't already escaped
+              let fixed = value
+                // Fix newlines
+                .replace(/(?<!\\)\n/g, '\\n')
+                .replace(/(?<!\\)\r/g, '\\r')
+                .replace(/(?<!\\)\t/g, '\\t')
+                // Fix other control characters
+                .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+
+              return `"${fieldName}": "${fixed}"`;
+            }
+          );
+
+          // Remove trailing commas before closing braces/brackets
+          jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+
+          // Try parsing again
+          parsed = JSON.parse(jsonStr);
+          console.log('[Groq] Successfully fixed LinkedIn JSON after comprehensive cleanup');
+        } catch (secondError) {
+          console.error('[Groq] Second parse attempt failed, trying aggressive fix...');
+
+          // Last resort: try to manually extract posts using regex
+          const postsMatch = jsonStr.match(/"posts"\s*:\s*\[([\s\S]*)\]/);
+          if (postsMatch) {
+            // Try to extract individual post objects
+            const postsArrayStr = postsMatch[1];
+            const postObjects = postsArrayStr.match(/\{[^}]*"title"[^}]*\}/g) || [];
+
+            console.log(`[Groq] Attempting to extract ${postObjects.length} LinkedIn posts manually`);
+
+            const manuallyParsedPosts = postObjects.map(postStr => {
+              try {
+                // Clean the individual post object
+                let cleanPost = postStr
+                  .replace(/(?<!\\)\n/g, '\\n')
+                  .replace(/(?<!\\)\r/g, '\\r')
+                  .replace(/(?<!\\)\t/g, '\\t')
+                  .replace(/,(\s*})/g, '$1');
+
+                return JSON.parse(cleanPost);
+              } catch (e) {
+                console.error('[Groq] Failed to parse individual post:', e);
+                return null;
+              }
+            }).filter(p => p !== null);
+
+            parsed = { posts: manuallyParsedPosts };
+            console.log(`[Groq] Manually extracted ${manuallyParsedPosts.length} LinkedIn posts`);
+          } else {
+            throw secondError;
           }
-        );
-        parsed = JSON.parse(jsonStr);
+        }
       }
 
       const posts = Array.isArray(parsed.posts) ? parsed.posts : [];
       console.log(`[Groq] Parsed ${posts.length} LinkedIn posts successfully`);
+
+      if (posts.length === 0) {
+        console.warn('[Groq] WARNING: No LinkedIn posts were parsed from the response');
+        console.warn('[Groq] Raw response sample:', responseContent.substring(0, 1000));
+      }
 
       const times = ['8:00 AM', '7:30 AM'];
       return posts.map((post: any, index: number) => ({
@@ -656,6 +713,9 @@ CRITICAL: Escape all newlines as \\n. Response must be valid JSON.`;
       }));
     } catch (error) {
       console.error('[Groq] Error parsing LinkedIn posts:', error);
+      console.error('[Groq] Failed response (first 2000 chars):', responseContent.substring(0, 2000));
+
+      // Return empty array but log for debugging
       return [];
     }
   }
