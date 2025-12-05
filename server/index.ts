@@ -3,7 +3,7 @@ import multer from 'multer';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { DeepgramService } from './services/deepgram';
 import { GroqService } from './services/groq';
 
@@ -73,7 +73,15 @@ const upload = multer({
 // Initialize services
 const deepgramService = new DeepgramService();
 const groqService = new GroqService();
-const resend = new Resend(process.env.RESEND_API_KEY || '');
+
+// Create nodemailer transporter for Gmail
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER || '14soulemanesow@gmail.com',
+    pass: process.env.EMAIL_PASSWORD || '', // Gmail App Password
+  },
+});
 
 /**
  * Health check endpoint
@@ -230,11 +238,11 @@ app.post('/api/transcribe-url', async (req: Request, res: Response) => {
 
 /**
  * POST /api/send-newsletter
- * Send a newsletter email using Resend
+ * Send a newsletter email using Nodemailer (Gmail)
  */
 app.post('/api/send-newsletter', async (req: Request, res: Response) => {
   try {
-    const { to, subject, body, fromName } = req.body;
+    const { to, subject, body } = req.body;
 
     if (!to || !subject || !body) {
       return res.status(400).json({
@@ -245,36 +253,30 @@ app.post('/api/send-newsletter', async (req: Request, res: Response) => {
 
     console.log(`[API] Sending newsletter to: ${to}`);
 
-    // Check if Resend API key is configured
-    if (!process.env.RESEND_API_KEY) {
-      console.error('[API] RESEND_API_KEY not configured');
+    // Check if email credentials are configured
+    if (!process.env.EMAIL_PASSWORD) {
+      console.error('[API] EMAIL_PASSWORD not configured');
       return res.status(500).json({
         error: 'Email service not configured',
-        message: 'Please configure RESEND_API_KEY in environment variables',
+        message: 'Please configure EMAIL_PASSWORD in environment variables',
       });
     }
 
-    const result = await resend.emails.send({
-      from: fromName ? `${fromName} <onboarding@resend.dev>` : 'One-Take Studio <onboarding@resend.dev>',
-      to: Array.isArray(to) ? to : [to],
+    // Send email using nodemailer
+    const info = await transporter.sendMail({
+      from: `One-Take Studio <${process.env.EMAIL_USER || '14soulemanesow@gmail.com'}>`,
+      to: Array.isArray(to) ? to.join(', ') : to,
       subject,
       text: body,
+      html: `<pre style="font-family: Arial, sans-serif; white-space: pre-wrap;">${body}</pre>`,
     });
 
-    if (result.error) {
-      console.error('[API] Resend error:', result.error);
-      return res.status(500).json({
-        error: 'Failed to send email',
-        message: result.error.message || 'An error occurred while sending the email',
-      });
-    }
-
-    console.log(`[API] Newsletter sent successfully, ID: ${result.data?.id}`);
+    console.log(`[API] Newsletter sent successfully, Message ID: ${info.messageId}`);
 
     res.json({
       success: true,
       data: {
-        id: result.data?.id,
+        messageId: info.messageId,
         message: 'Newsletter sent successfully',
       },
     });
