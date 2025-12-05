@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Copy, Check, Clock, Hash, ExternalLink } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Copy, Check, Clock, Hash, ExternalLink, Mail, Send } from "lucide-react";
 import { ContentPiece } from "@/data/mockContent";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -56,6 +58,9 @@ const formatTemplate = (template?: string) => {
 const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
   const [copied, setCopied] = useState(false);
   const [showFullScript, setShowFullScript] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+  const [isSending, setIsSending] = useState(false);
   const config = platformConfig[content.type];
   const templateLabel = formatTemplate(content.template);
 
@@ -83,6 +88,55 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
       return `${content.title}\n\n${content.content}`;
     }
     return content.content;
+  };
+
+  const sendNewsletter = async () => {
+    if (!emailTo.trim()) {
+      toast.error("Please enter an email address");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailTo.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setIsSending(true);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/send-newsletter`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: emailTo.trim(),
+          subject: content.title || 'Newsletter from One-Take Studio',
+          body: content.content,
+          fromName: 'One-Take Studio',
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to send email');
+      }
+
+      toast.success("Newsletter sent successfully!", {
+        description: `Email sent to ${emailTo}`,
+      });
+      setShowEmailDialog(false);
+      setEmailTo("");
+    } catch (error: any) {
+      console.error('Send newsletter error:', error);
+      toast.error(error.message || 'Failed to send newsletter');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleCopy = async (e: React.MouseEvent) => {
@@ -164,6 +218,20 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
               >
                 <ExternalLink className="w-3 h-3" />
                 {copied ? "✓ Copied! Opening LinkedIn..." : "Share on LinkedIn"}
+              </Button>
+            )}
+            {content.type === "newsletter" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowEmailDialog(true);
+                }}
+              >
+                <Mail className="w-3 h-3" />
+                Send Email
               </Button>
             )}
             <Button
@@ -273,6 +341,78 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
               }}
             >
               {copied ? "✓ Copied!" : "Copy Script"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )}
+
+    {content.type === "newsletter" && (
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              Send Newsletter
+            </DialogTitle>
+            <DialogDescription>
+              Send this newsletter content via email
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Recipient Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="recipient@example.com"
+                value={emailTo}
+                onChange={(e) => setEmailTo(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    sendNewsletter();
+                  }
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Subject</Label>
+              <p className="text-sm text-muted-foreground">
+                {content.title || 'Newsletter from One-Take Studio'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Preview</Label>
+              <div className="rounded-md bg-muted p-3 max-h-[200px] overflow-y-auto">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-6">
+                  {content.content}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowEmailDialog(false)}
+              disabled={isSending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={sendNewsletter}
+              disabled={isSending || !emailTo.trim()}
+            >
+              {isSending ? (
+                <>
+                  <Send className="w-4 h-4 mr-2 animate-pulse" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Email
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>

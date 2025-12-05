@@ -3,6 +3,7 @@ import multer from 'multer';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
+import { Resend } from 'resend';
 import { DeepgramService } from './services/deepgram';
 import { GroqService } from './services/groq';
 
@@ -72,6 +73,7 @@ const upload = multer({
 // Initialize services
 const deepgramService = new DeepgramService();
 const groqService = new GroqService();
+const resend = new Resend(process.env.RESEND_API_KEY || '');
 
 /**
  * Health check endpoint
@@ -221,6 +223,66 @@ app.post('/api/transcribe-url', async (req: Request, res: Response) => {
 
     res.status(500).json({
       error: 'Transcription failed',
+      message: error.message || 'An unknown error occurred',
+    });
+  }
+});
+
+/**
+ * POST /api/send-newsletter
+ * Send a newsletter email using Resend
+ */
+app.post('/api/send-newsletter', async (req: Request, res: Response) => {
+  try {
+    const { to, subject, body, fromName } = req.body;
+
+    if (!to || !subject || !body) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'Please provide to, subject, and body',
+      });
+    }
+
+    console.log(`[API] Sending newsletter to: ${to}`);
+
+    // Check if Resend API key is configured
+    if (!process.env.RESEND_API_KEY) {
+      console.error('[API] RESEND_API_KEY not configured');
+      return res.status(500).json({
+        error: 'Email service not configured',
+        message: 'Please configure RESEND_API_KEY in environment variables',
+      });
+    }
+
+    const result = await resend.emails.send({
+      from: fromName ? `${fromName} <onboarding@resend.dev>` : 'One-Take Studio <onboarding@resend.dev>',
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      text: body,
+    });
+
+    if (result.error) {
+      console.error('[API] Resend error:', result.error);
+      return res.status(500).json({
+        error: 'Failed to send email',
+        message: result.error.message || 'An error occurred while sending the email',
+      });
+    }
+
+    console.log(`[API] Newsletter sent successfully, ID: ${result.data?.id}`);
+
+    res.json({
+      success: true,
+      data: {
+        id: result.data?.id,
+        message: 'Newsletter sent successfully',
+      },
+    });
+  } catch (error: any) {
+    console.error('[API] Error sending newsletter:', error);
+
+    res.status(500).json({
+      error: 'Server error',
       message: error.message || 'An unknown error occurred',
     });
   }
