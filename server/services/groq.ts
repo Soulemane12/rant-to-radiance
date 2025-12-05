@@ -162,7 +162,9 @@ Find 3-5 spicy moments that are:
 
       const fullText = transcript.transcript.map(chunk => chunk.text).join(' ');
 
-      const prompt = `You are a viral TikTok scriptwriter. Based on this transcript and its spicy moments, create 3-5 TikTok scripts (30-45 seconds each) that will go viral.
+      const prompt = `You are a viral TikTok scriptwriter. Based on this transcript and its spicy moments, create EXACTLY 2 TikTok scripts (30-45 seconds each) that will go viral.
+
+CRITICAL: You MUST generate EXACTLY 2 scripts. No more, no less.
 
 TRANSCRIPT:
 ${fullText}
@@ -214,7 +216,7 @@ CRITICAL FORMAT RULES:
         ],
         model: 'llama-3.3-70b-versatile',
         temperature: 0.8,
-        max_tokens: 3000,
+        max_tokens: 4000,
       });
 
       const responseContent = completion.choices[0]?.message?.content || '{}';
@@ -310,7 +312,9 @@ CRITICAL FORMAT RULES:
 
       const fullText = transcript.transcript.map(chunk => chunk.text).join(' ');
 
-      const prompt = `You are a viral Twitter content strategist. Based on this transcript, create 2-3 Twitter threads using Tweet Hunter proven templates (Alex Llull's list) that drive engagement.
+      const prompt = `You are a viral Twitter content strategist. Based on this transcript, create EXACTLY 2 Twitter threads using Tweet Hunter proven templates (Alex Llull's list) that drive engagement.
+
+CRITICAL: You MUST generate EXACTLY 2 threads. No more, no less.
 
 TRANSCRIPT:
 ${fullText}
@@ -413,7 +417,9 @@ CRITICAL: Escape all newlines as \\n. Response must be valid JSON.`;
 
       const fullText = transcript.transcript.map(chunk => chunk.text).join(' ');
 
-      const prompt = `You are a professional LinkedIn content strategist. Based on this transcript, create 2 LinkedIn posts that will drive professional engagement.
+      const prompt = `You are a professional LinkedIn content strategist. Based on this transcript, create EXACTLY 2 LinkedIn posts that will drive professional engagement.
+
+CRITICAL: You MUST generate EXACTLY 2 posts. No more, no less.
 
 TRANSCRIPT:
 ${fullText}
@@ -484,7 +490,9 @@ CRITICAL: Escape all newlines as \\n. Response must be valid JSON.`;
 
       const fullText = transcript.transcript.map(chunk => chunk.text).join(' ');
 
-      const prompt = `You are an expert newsletter writer. Based on this transcript, create 1 engaging newsletter email.
+      const prompt = `You are an expert newsletter writer. Based on this transcript, create EXACTLY 1 engaging newsletter email.
+
+CRITICAL: You MUST generate EXACTLY 1 newsletter. No more, no less.
 
 TRANSCRIPT:
 ${fullText}
@@ -531,7 +539,7 @@ CRITICAL: Escape all newlines as \\n. Response must be valid JSON.`;
         ],
         model: 'llama-3.3-70b-versatile',
         temperature: 0.7,
-        max_tokens: 3000,
+        max_tokens: 4000,
       });
 
       const responseContent = completion.choices[0]?.message?.content || '{}';
