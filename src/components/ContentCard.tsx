@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Copy, Check, Clock, Hash, ExternalLink } from "lucide-react";
 import { ContentPiece } from "@/data/mockContent";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface ContentCardProps {
   content: ContentPiece;
@@ -140,28 +141,48 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
                 onClick={async (e) => {
                   e.stopPropagation();
                   const text = getCopyText();
-                  await navigator.clipboard.writeText(text);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                  openLinkedIn();
+
+                  try {
+                    await navigator.clipboard.writeText(text);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 3000);
+
+                    // Show prominent toast notification
+                    toast.success("Copied to clipboard!", {
+                      description: "Opening LinkedIn... Click 'Start a post' and paste (Cmd+V or Ctrl+V)",
+                      duration: 5000,
+                    });
+
+                    // Small delay to ensure copy completes and user sees the toast
+                    setTimeout(() => {
+                      openLinkedIn();
+                    }, 800);
+                  } catch (err) {
+                    toast.error("Failed to copy to clipboard");
+                  }
                 }}
-                title="Copies content to clipboard and opens LinkedIn - paste to share"
               >
                 <ExternalLink className="w-3 h-3" />
-                {copied ? "Copied! Paste on LinkedIn" : "Share on LinkedIn"}
+                {copied ? "✓ Copied! Opening LinkedIn..." : "Share on LinkedIn"}
               </Button>
             )}
             <Button
               variant="ghost"
               size="icon"
               className="shrink-0"
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
                 const text = getCopyText();
-                navigator.clipboard.writeText(text);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
+                try {
+                  await navigator.clipboard.writeText(text);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                  toast.success("Copied to clipboard!");
+                } catch (err) {
+                  toast.error("Failed to copy to clipboard");
+                }
               }}
+              title="Copy to clipboard"
             >
               {copied ? (
                 <Check className="w-4 h-4 text-[hsl(142,71%,45%)]" />
@@ -241,12 +262,17 @@ const ContentCard = ({ content, isExpanded, onToggle }: ContentCardProps) => {
               size="sm"
               onClick={async () => {
                 const text = getCopyText();
-                await navigator.clipboard.writeText(text);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
+                try {
+                  await navigator.clipboard.writeText(text);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                  toast.success("TikTok script copied to clipboard!");
+                } catch (err) {
+                  toast.error("Failed to copy script");
+                }
               }}
             >
-              Copy Script
+              {copied ? "✓ Copied!" : "Copy Script"}
             </Button>
           </div>
         </DialogContent>
